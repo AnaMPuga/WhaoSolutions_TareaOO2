@@ -342,6 +342,36 @@ function findGaps(rows) {
   return gaps;
 }
 
+function findMaintenanceEvents(rows) {
+  const events = [];
+  let current = null;
+
+  for (const row of rows) {
+    if (!isMaintenance(row.ts) || row.running) {
+      current = null;
+      continue;
+    }
+
+    if (current && row.ts - current.end === 3600000) {
+      current.end = row.ts;
+      current.rows.push(row);
+      continue;
+    }
+
+    current = {
+      start: row.ts,
+      end: row.ts,
+      rows: [row],
+      reasons: ["Horno apagado durante mantenimiento programado"],
+      type: "Parada por mantenimiento",
+      severity: "programado"
+    };
+    events.push(current);
+  }
+
+  return events;
+}
+
 function extraFindings(rows) {
   const valid = validRows(rows);
   const working = valid.filter((row) => row.running && !isMaintenance(row.ts));
@@ -711,8 +741,10 @@ function renderChart(rows, anomalies) {
 
 function renderAnomalies(anomalies) {
   const body = document.querySelector("#anomaly-body");
-  body.innerHTML = anomalies.length
-    ? anomalies
+  const displayEvents = [...anomalies, ...findMaintenanceEvents(validRows(normalizedRows))]
+    .sort((a, b) => a.start - b.start);
+  body.innerHTML = displayEvents.length
+    ? displayEvents
         .map(
           (event) => {
             const maximumExcess = Math.max(
@@ -730,12 +762,13 @@ function renderAnomalies(anomalies) {
               maximumExcess > 0 &&
               maximumExcess < 1;
             const mildLabel = mildConsumption
-              ? ' <span class="file-pill warn">variación leve</span>'
+              ? '<span class="file-pill warn mild-anomaly-label">variación leve</span>'
               : "";
 
             return (
-            `<tr><td>${formatDateTime(event.start)}${event.end.getTime() !== event.start.getTime() ? `<br>— ${formatDateTime(event.end)}` : ""}</td>` +
-            `<td>${escapeHtml(event.type)}${mildLabel}</td><td>${escapeHtml(describeEvent(event))}</td></tr>`
+              `<tr><td>${formatDateTime(event.start)}${event.end.getTime() !== event.start.getTime() ? `<br>— ${formatDateTime(event.end)}` : ""}</td>` +
+              `<td>${escapeHtml(event.type)}${mildLabel ? `<br>${mildLabel}` : ""}</td>` +
+              `<td>${escapeHtml(describeEvent(event))}</td></tr>`
             );
           }
         )
@@ -758,11 +791,17 @@ function describeEvent(event) {
 
   const temps = event.rows.map((row) => row.temp);
   const kws = event.rows.map((row) => row.kw);
+  const details =
+    `Temperatura ${formatNumber(Math.min(...temps))}–${formatNumber(Math.max(...temps))} °C; ` +
+    `consumo ${formatNumber(Math.min(...kws))}–${formatNumber(Math.max(...kws))} kW.`;
+
+  if (event.type === "Parada por mantenimiento") {
+    return `Horno apagado durante el mantenimiento programado. ${details}`;
+  }
 
   return (
     `${[...new Set(event.reasons)].join("; ")}. ` +
-    `Temperatura ${formatNumber(Math.min(...temps))}–${formatNumber(Math.max(...temps))} °C; ` +
-    `consumo ${formatNumber(Math.min(...kws))}–${formatNumber(Math.max(...kws))} kW.`
+    details
   );
 }
 

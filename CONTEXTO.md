@@ -97,7 +97,7 @@ R5	arranque por debajo del límite habitual y subida <5 °C en las 3 horas sigui
 R6	temp idéntica durante 4 lecturas horarias consecutivas	Sensor congelado
 R7	Huecos de timestamps (los duplicados se contabilizan en calidad)	Fallo de registro
 Exclusión obligatoria: ignorar 2026-09-23 06:00 ≤ ts ≤ 09:00 (mantenimiento).
-Agrupar horas consecutivas en un único evento {start, end, ...}.
+Agrupar horas consecutivas en un único evento {start, end, ...}. La tabla puede mostrar además la parada por mantenimiento como evento informativo, con el tramo realmente parado; esta fila no se considera anomalía ni entra en el aviso.
 Reglas activas: R1, R2, R3, R5, R6 y huecos de R7. R4 no está activada. Parámetros: lo y hi se calculan desde el CSV; salto ≥10 °C; sensor plano = 4 lecturas consecutivas idénticas; arranque sin subida ≥5 °C en 3 horas. El detector de arranque solo actúa si empieza por debajo del límite inferior habitual.
 6.3 Aviso al operario
 

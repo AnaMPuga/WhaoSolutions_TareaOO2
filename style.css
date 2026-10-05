@@ -45,6 +45,7 @@ h1 em { color: var(--green); font-style: normal; }
 .file-pills { display: flex; flex-wrap: wrap; gap: 7px; margin-left: auto; }
 .file-pill { padding: 6px 9px; background: var(--green-pale); color: var(--green); font: 10px var(--mono); white-space: nowrap; }
 .file-pill.warn { color: #8f4b1f; background: #f3ead3; }
+.mild-anomaly-label { display: inline-block; margin-top: 5px; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; text-align: left; }
 th { padding: 8px 10px; color: var(--muted); border-bottom: 1px solid var(--line); font: 10px var(--mono); font-weight: 400; }
