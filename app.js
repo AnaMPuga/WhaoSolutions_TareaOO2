@@ -626,14 +626,10 @@ async function loadData() {
 }
 
 function renderFile(info) {
-  const dateRange =
-    info.first && info.last ? `${formatDate(info.first)} – ${formatDate(info.last)}` : "sin fechas válidas";
-
   document.querySelector("#file-content").innerHTML =
-    `<p><strong>horno_semana.csv</strong> · ${dateRange}. Se leyeron ${info.n} filas: ${info.running} en marcha y ${info.stops} paradas. Temperatura registrada: ${formatNumber(info.minTemp)}–${formatNumber(info.maxTemp)} °C.</p>` +
+    "<p>El fichero analizado contiene los datos de actividad de un horno recogidos a lo largo de una semana. Los parámetros que se han tenido en cuenta son la fecha y la hora, la temperatura del horno en grados centígrados, el consumo en kilowatios y el estado de funcionamiento (parada, en marcha).</p>" +
     `<div class="file-pills"><span class="file-pill ${info.n === EXPECTED_HOURS ? "" : "warn"}">${info.n}/${EXPECTED_HOURS} filas</span>` +
-    `<span class="file-pill">${info.invalid} inválidas</span><span class="file-pill">${info.duplicates} duplicadas</span>` +
-    `<span class="file-pill">${info.outOfRange} fuera de rango físico</span></div>`;
+    `<span class="file-pill">${info.invalid} inválidas</span><span class="file-pill">${info.duplicates} duplicadas</span></div>`;
 }
 
 function renderDaily(stats) {
