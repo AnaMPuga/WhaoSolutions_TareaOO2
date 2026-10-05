@@ -137,7 +137,7 @@ Ahora mismo: aplicación implementada. El CSV contiene 168 registros: 165 en mar
 Tema	Decisión	Motivo
 Estadísticas diarias	media, máxima y mínima con todas las horas registradas	La columna de horas en marcha muestra marcha/total (por ejemplo, 21/24); las paradas de mantenimiento se indican con etiqueta y nota dinámica.
 Método de rango normal	mediana ± 3 × 1,4826 × MAD	Robusto ante valores extremos; se calcula en marcha fuera de mantenimiento. Para este CSV: temperatura 179,3–190,9 °C y consumo 136,3–147,8 kW.
-Umbrales	Temperatura/consumo fuera de límites robustos; salto horario ≥10 °C; sensor plano desde 4 lecturas; arranque: subida <5 °C en 3 h	Los límites exactos se calculan desde el CSV y se muestran en la página; las reglas de sensor plano y arranque también se muestran en el método. Mantenimiento del mié 23 06:00–09:00 excluido inclusivamente; el registro de las 09:00 está en marcha, pero se excluye por la ventana.
+Umbrales	Temperatura/consumo fuera de límites robustos; salto horario ≥10 °C; sensor plano desde 4 lecturas; arranque: subida <5 °C en 3 h	Los límites exactos se calculan desde el CSV y se muestran en la página; las reglas de sensor plano y arranque también se muestran en el método. Mantenimiento del mié 23 06:00–09:00 excluido inclusivamente; el registro de las 09:00 está en marcha, pero se excluye por la ventana. La etiqueta "variación importante" se muestra si la temperatura queda ≥10 °C fuera del límite robusto; "variación leve" se reserva para exceso de consumo <1 kW cuando esa es la única señal.
 Aviso al operario	Tres líneas: qué pasó, dato de consumo comparado con el habitual y recomendación	La primera indica la franja real sin horas recuperadas, el extremo y lo normal aproximado. La segunda compara el consumo máximo con el habitual cuando sube mientras baja la temperatura, sin analogías. La tercera recomienda revisar horno y sensor antes del próximo turno y avisar si se repite, sin afirmar la causa.
 Consumo y correlación	Consumo diario con todas las filas; correlación operativa con y sin el evento más grave	La correlación se calcula sobre horas en marcha fuera de mantenimiento; al comparar, se quitan del cálculo las filas del evento completo y se explica cómo cambia la relación.
 10. Checklist de entrega
@@ -153,7 +153,7 @@ Consumo y correlación	Consumo diario con todas las filas; correlación operativ
 11. Registro de uso de IA
 IA	Para qué	Qué verifiqué yo
 Claude	Hoja de ruta y archivo CONTEXTO.md.	La persona autora revisa las decisiones y contrasta las salidas con el CSV.
-GitHub Copilot	Estructura HTML/CSS/JS, análisis del CSV, gráfico y aviso basado en reglas explícitas.	Inspección del CSV: 168 filas; 165 en marcha y 3 paradas; fila del miércoles a las 09:00: marcha, 188,4 °C y 144,2 kW. Se probaron las tablas y anomalías en el navegador local. Pendientes: prueba específica de consola Live Server e impresión/PDF.
+GitHub Copilot	Estructura HTML/CSS/JS y análisis del CSV basado en reglas explícitas.	Se contrastaron las filas y los estados con el CSV original (168 filas; 165 en marcha y 3 paradas). Se probaron las tablas y anomalías en el navegador local. Pendientes: prueba específica de consola Live Server e impresión/PDF.
 12. Reglas para el asistente
 Entrega el código completo del archivo afectado e indica su ruta.
 No renombres funciones, IDs ni ficheros sin avisar.

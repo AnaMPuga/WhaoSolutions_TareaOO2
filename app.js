@@ -577,11 +577,11 @@ function buildOperatorNotice(anomalies) {
   const consumptionChange = excursion.rows.at(-1).kw - excursion.rows[0].kw;
   const consumptionRoseWhileCooling = temperatureChange < 0 && consumptionChange > 0;
   const consumptionLine = consumptionRoseWhileCooling
-    ? `Mientras se enfriaba, gastó más electricidad (hasta ${formatNumber(Math.max(...excursion.rows.map((row) => row.kw)))} kW frente a unos ${formatNumber(analysisParameters.kwBounds.center)} kW).`
+    ? `Mientras se enfriaba, gastó más electricidad (hasta ${formatNumber(Math.max(...excursion.rows.map((row) => row.kw)))}\u00a0kW frente a unos ${formatNumber(analysisParameters.kwBounds.center)}\u00a0kW).`
     : "En ese periodo no se observó que el consumo subiera mientras bajaba la temperatura.";
 
   return [
-    `El ${dayLabel}, ${period}, ${isCooling ? "el horno se enfrió" : "el horno se calentó"}: ${isCooling ? "bajó" : "subió"} hasta ${formatNumber(extreme)} °C cuando lo normal son unos ${usual} °C.`,
+    `El ${dayLabel}, ${period}, ${isCooling ? "el horno se enfrió" : "el horno se calentó"}: ${isCooling ? "bajó" : "subió"} hasta ${formatNumber(extreme)}\u00a0°C cuando lo normal son unos ${usual}\u00a0°C.`,
     consumptionLine,
     "Conviene revisar el horno y su sensor de temperatura antes del próximo turno y avisar si se repite; con estos datos no se puede saber la causa."
   ];
@@ -757,13 +757,27 @@ function renderAnomalies(anomalies) {
               event.reasons[0] === "Consumo fuera del rango habitual" &&
               maximumExcess > 0 &&
               maximumExcess < 1;
-            const mildLabel = mildConsumption
+            const maximumTemperatureExcess = Math.max(
+              ...event.rows.map((row) =>
+                Math.max(
+                  analysisParameters.tempBounds.lo - row.temp,
+                  row.temp - analysisParameters.tempBounds.hi,
+                  0
+                )
+              )
+            );
+            const importantVariation =
+              event.type === "Funcionamiento fuera del patrón" &&
+              maximumTemperatureExcess >= 10;
+            const variationLabel = mildConsumption
               ? '<span class="file-pill warn mild-anomaly-label">variación leve</span>'
-              : "";
+              : importantVariation
+                ? '<span class="file-pill important mild-anomaly-label">variación importante</span>'
+                : "";
 
             return (
               `<tr><td>${formatDateTime(event.start)}${event.end.getTime() !== event.start.getTime() ? `<br>— ${formatDateTime(event.end)}` : ""}</td>` +
-              `<td>${escapeHtml(event.type)}${mildLabel ? `<br>${mildLabel}` : ""}</td>` +
+              `<td>${escapeHtml(event.type)}${variationLabel ? `<br>${variationLabel}` : ""}</td>` +
               `<td>${escapeHtml(describeEvent(event))}</td></tr>`
             );
           }
