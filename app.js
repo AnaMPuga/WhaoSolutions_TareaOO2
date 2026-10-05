@@ -511,7 +511,6 @@ function buildOperatorNotice(anomalies) {
   if (!anomalies.length) {
     return [
       "No se detectaron lecturas fuera de los criterios usados esta semana.",
-      "Las mediciones se mantuvieron dentro de la banda habitual calculada.",
       "Continúe con las comprobaciones normales del turno."
     ];
   }
@@ -525,7 +524,6 @@ function buildOperatorNotice(anomalies) {
     const period = event.start.getTime() === event.end.getTime() ? first : `${first} a ${last}`;
     return [
       `El ${period} se observó ${event.reasons[0].toLowerCase()}.`,
-      "Es como notar que algo no funciona como de costumbre durante el trabajo.",
       "Revise el horno y el sensor; estas lecturas no permiten afirmar cuál es la causa."
     ];
   }
@@ -541,7 +539,6 @@ function buildOperatorNotice(anomalies) {
 
   return [
     `El ${dayLabel}, ${period}, la temperatura bajó hasta ${formatNumber(extreme)} °C; su valor habitual (mediana) es ${usual} °C.`,
-    "Es como subir el fuego de una olla y aun así verla enfriarse: el consumo subió mientras la temperatura bajó.",
     "Revise el horno y el sensor; estas lecturas no permiten afirmar cuál es la causa."
   ];
 }

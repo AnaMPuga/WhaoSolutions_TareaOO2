@@ -74,7 +74,7 @@ describeFile(rows)     → obj   // n filas, rango fechas, min/max, nº parado/e
 dailyStats(rows, {onlyRunning:boolean}) → DayStat[]  // { dayKey, label, mean, max, min, n }
 detectAnomalies(rows)  → Anomaly[]   // { start, end, type, severity, description }
 extraFindings(rows)    → obj         // kWh/día, corr(temp,kw), deriva semanal, calidad del dato
-buildOperatorNotice(anomalies) → string[3]
+buildOperatorNotice(anomalies) → string[2]
 render*()                      // renderFile, renderDaily, renderChart, renderAnomalies, ...
 Convenciones
 dayKey = YYYY-MM-DD construido con getters locales (getFullYear/getMonth/getDate). No usar toISOString(): convierte a UTC y puede mover el registro al día anterior.
@@ -102,7 +102,7 @@ Agrupar horas consecutivas en un único evento {start, end, ...}.
 Reglas activas: R1, R2, R3, R5, R6 y huecos de R7. R4 no está activada. Parámetros: lo y hi se calculan desde el CSV; salto ≥10 °C; sensor plano = 4 lecturas consecutivas idénticas; arranque sin subida ≥5 °C en 3 horas. El detector de arranque solo actúa si empieza por debajo del límite inferior habitual.
 6.3 Aviso al operario
 
-Exactamente 3 líneas: (1) cuándo y qué se vio (día, hora, valores), (2) analogía simple, (3) acción recomendada. Describe lo observado; recomienda revisar, no afirma la avería.
+Exactamente 2 líneas: (1) cuándo y qué se vio (día, hora, valores), (2) recomendación de revisar el horno y el sensor sin afirmar la causa.
 
 6.4 Hallazgos extra
 
@@ -127,7 +127,7 @@ CSS: una columna, tarjetas por sección, @media print para que todo quepa en 1 h
  [x] F3 dailyStats + tablas (todas las horas y solo en marcha)
  [x] F4 Gráfica Chart.js
  [x] F5 detectAnomalies con exclusión de mantenimiento
- [x] F6 buildOperatorNotice (tres líneas)
+ [x] F6 buildOperatorNotice (dos líneas)
  [x] F7 extraFindings
  [x] F8 CSS adaptable + reglas de impresión (impresión A4 pendiente de comprobar)
  [x] F9 Sección "Uso de IA"
@@ -139,7 +139,7 @@ Tema	Decisión	Motivo
 Estadísticas diarias	media, máxima y mínima con todas las horas registradas	La columna de horas en marcha muestra marcha/total (por ejemplo, 21/24); las paradas de mantenimiento se indican con etiqueta y nota dinámica.
 Método de rango normal	mediana ± 3 × 1,4826 × MAD	Robusto ante valores extremos; se calcula en marcha fuera de mantenimiento. Para este CSV: temperatura 179,3–190,9 °C y consumo 136,3–147,8 kW.
 Umbrales	Temperatura/consumo fuera de límites robustos; salto horario ≥10 °C; sensor plano desde 4 lecturas; arranque: subida <5 °C en 3 h	Los límites exactos se calculan desde el CSV y se muestran en la página; las reglas de sensor plano y arranque también se muestran en el método. Mantenimiento del mié 23 06:00–09:00 excluido inclusivamente; el registro de las 09:00 está en marcha, pero se excluye por la ventana.
-Aviso al operario	Tres líneas en lenguaje sencillo sobre la excursión térmica más grave	La franja termina en la última hora fuera de rango (se omiten las horas recuperadas); muestra el extremo y la mediana habitual. La analogía menciona que subió el consumo mientras bajaba la temperatura; recomienda revisar horno y sensor sin afirmar causa.
+Aviso al operario	Dos líneas en lenguaje sencillo sobre la excursión térmica más grave	La franja termina en la última hora fuera de rango (se omiten las horas recuperadas); muestra el extremo y la mediana habitual. La segunda línea recomienda revisar horno y sensor sin afirmar causa.
 Consumo y correlación	Consumo diario con todas las filas; correlación operativa con y sin el evento más grave	La correlación se calcula sobre horas en marcha fuera de mantenimiento; al comparar, se quitan del cálculo las filas del evento completo y se explica cómo cambia la relación.
 10. Checklist de entrega
  [ ] Consola (F12) sin errores con Live Server (pendiente)
@@ -147,7 +147,7 @@ Consumo y correlación	Consumo diario con todas las filas; correlación operativ
  [x] Contrastar la media, máxima y mínima del miércoles con todas las horas registradas
  [x] La parada 06–08 y el registro de las 09:00 están dentro de la exclusión de mantenimiento (06–09 inclusivo)
  [x] En el informe: consumo fuera de rango jue 24 06:00; evento más grave vie 25 14:00–20:00; sin señal de sensor plano ni arranque sin calentamiento en estos datos
- [x] Aviso de 3 líneas: franja térmica real, extremo frente a mediana, analogía consumo/temperatura y recomendación sin afirmar la causa
+ [x] Aviso de 2 líneas: franja térmica real, extremo frente a mediana y recomendación sin afirmar la causa
  [x] Consumo diario suma todas las lecturas; correlación compara valores con y sin el evento más grave y explica el cambio
  [ ] Impresión/PDF en una hoja (pendiente)
  [x] Nota de uso de IA incluida
