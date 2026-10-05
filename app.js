@@ -347,7 +347,7 @@ function extraFindings(rows) {
   const working = valid.filter((row) => row.running && !isMaintenance(row.ts));
   const energyByDay = new Map();
 
-  for (const row of valid.filter((item) => item.running)) {
+  for (const row of valid) {
     const key = dayKey(row.ts);
     energyByDay.set(key, (energyByDay.get(key) || 0) + row.kw);
   }
@@ -355,13 +355,64 @@ function extraFindings(rows) {
   const daily = dailyStats(rows, { onlyRunning: true });
   const firstDay = daily[0];
   const lastDay = daily.at(-1);
-  const correlation = pearson(
-    working.map((row) => row.temp),
-    working.map((row) => row.kw)
+  const correlation = pearsonRows(working);
+  const severeEvent = mostSevereEvent(latestAnomalies);
+  const severeEventTimes = new Set(severeEvent?.rows.map((row) => row.ts.getTime()) || []);
+  const correlationWithoutSevereEvent = pearsonRows(
+    working.filter((row) => !severeEventTimes.has(row.ts.getTime()))
   );
   const quality = describeFile(rows);
 
-  return { energyByDay, daily, firstDay, lastDay, correlation, quality };
+  return {
+    energyByDay,
+    daily,
+    firstDay,
+    lastDay,
+    correlation,
+    correlationWithoutSevereEvent,
+    severeEvent,
+    quality
+  };
+}
+
+function pearsonRows(rows) {
+  return pearson(
+    rows.map((row) => row.temp),
+    rows.map((row) => row.kw)
+  );
+}
+
+function temperatureExcursion(event) {
+  if (!event || !analysisParameters) return null;
+
+  const outsideRows = event.rows.filter(
+    (row) =>
+      row.running &&
+      !isMaintenance(row.ts) &&
+      (row.temp < analysisParameters.tempBounds.lo || row.temp > analysisParameters.tempBounds.hi)
+  );
+  if (!outsideRows.length) return null;
+
+  const segments = [];
+  for (const row of outsideRows) {
+    const current = segments.at(-1);
+    if (current && row.ts - current.end === 3600000) {
+      current.end = row.ts;
+      current.rows.push(row);
+    } else {
+      segments.push({ start: row.ts, end: row.ts, rows: [row] });
+    }
+  }
+
+  return segments.sort((a, b) => {
+    const aExtreme = Math.max(
+      ...a.rows.map((row) => Math.abs(row.temp - analysisParameters.tempBounds.center))
+    );
+    const bExtreme = Math.max(
+      ...b.rows.map((row) => Math.abs(row.temp - analysisParameters.tempBounds.center))
+    );
+    return bExtreme - aExtreme || b.rows.length - a.rows.length || a.start - b.start;
+  })[0];
 }
 
 function pearson(xs, ys) {
@@ -466,20 +517,32 @@ function buildOperatorNotice(anomalies) {
   }
 
   const event = mostSevereEvent(anomalies);
-  let when;
-  if (event.start.getTime() === event.end.getTime()) {
-    when = `El ${formatDateTime(event.start)}`;
-  } else if (dayKey(event.start) === dayKey(event.end)) {
-    when = `El ${formatDate(event.start)}, de ${formatTime(event.start)} a ${formatTime(event.end)},`;
-  } else {
-    when = `Entre ${formatDateTime(event.start)} y ${formatDateTime(event.end)}`;
+  const excursion = temperatureExcursion(event);
+
+  if (!excursion) {
+    const first = formatDateTime(event.start);
+    const last = formatDateTime(event.end);
+    const period = event.start.getTime() === event.end.getTime() ? first : `${first} a ${last}`;
+    return [
+      `El ${period} se observó ${event.reasons[0].toLowerCase()}.`,
+      "Es como notar que algo no funciona como de costumbre durante el trabajo.",
+      "Revise el horno y el sensor; estas lecturas no permiten afirmar cuál es la causa."
+    ];
   }
-  const detail = describeNoticeEvent(event);
+
+  const outsideTemperatures = excursion.rows.map((row) => row.temp);
+  const extreme = Math.min(...outsideTemperatures);
+  const dayLabel = `${DAY_NAMES[excursion.start.getDay()]} ${excursion.start.getDate()} ${MONTH_NAMES[excursion.start.getMonth()]}`;
+  const period =
+    excursion.start.getTime() === excursion.end.getTime()
+      ? `a las ${formatTime(excursion.start)}`
+      : `de ${formatTime(excursion.start)} a ${formatTime(excursion.end)}`;
+  const usual = formatNumber(analysisParameters.tempBounds.center);
 
   return [
-    `${when} se observó que ${detail}.`,
-    "Fue como ver el horno salirse de su carril habitual durante la lectura.",
-    "Revise el equipo y las mediciones de ese periodo; estos datos no permiten confirmar la causa."
+    `El ${dayLabel}, ${period}, la temperatura bajó hasta ${formatNumber(extreme)} °C; su valor habitual (mediana) es ${usual} °C.`,
+    "Es como subir el fuego de una olla y aun así verla enfriarse: el consumo subió mientras la temperatura bajó.",
+    "Revise el horno y el sensor; estas lecturas no permiten afirmar cuál es la causa."
   ];
 }
 
@@ -685,12 +748,13 @@ function renderExtra(findings) {
   const drift =
     findings.firstDay && findings.lastDay ? findings.lastDay.mean - findings.firstDay.mean : NaN;
   const quality = findings.quality;
-  const correlationText = Number.isFinite(findings.correlation)
-    ? `${formatNumber(findings.correlation)} (Pearson, en marcha)`
-    : "no calculable";
+  const correlationText =
+    Number.isFinite(findings.correlation) && Number.isFinite(findings.correlationWithoutSevereEvent)
+      ? `En horas en marcha, la correlación temperatura–consumo es ${formatNumber(findings.correlation)} con todos los datos y ${formatNumber(findings.correlationWithoutSevereEvent)} sin el evento más grave (${findings.severeEvent ? `${formatDateTime(findings.severeEvent.start)}–${formatDateTime(findings.severeEvent.end)}` : "sin evento excluido"}). ${describeCorrelationDifference(findings.correlation, findings.correlationWithoutSevereEvent)} La correlación no demuestra causalidad.`
+      : "La correlación temperatura–consumo no es calculable.";
   const items = [
-    `Consumo estimado: ${energy.map(([key, value]) => `${key.slice(5)} ${formatNumber(value)} kWh`).join(" · ")}. Suma horaria aproximada; incluye solo registros en marcha. Mayor consumo: ${maxEnergy[0] ? `${maxEnergy[0]} (${formatNumber(maxEnergy[1])} kWh)` : "no calculable"}.`,
-    `Correlación temperatura–consumo: ${correlationText}. La correlación no demuestra causalidad.`,
+    `Consumo estimado: ${energy.map(([key, value]) => `${key.slice(5)} ${formatNumber(value)} kWh`).join(" · ")}. Suma horaria aproximada con todas las lecturas, también las horas paradas. Mayor consumo: ${maxEnergy[0] ? `${maxEnergy[0]} (${formatNumber(maxEnergy[1])} kWh)` : "no calculable"}.`,
+    correlationText,
     `Cambio entre media del primer y último día: ${Number.isFinite(drift) ? `${drift > 0 ? "+" : ""}${formatNumber(drift)} °C` : "no calculable"}.`,
     `Calidad: ${quality.invalid} fila(s) con campos inválidos, ${quality.duplicates} duplicada(s), ${analysisParameters?.gaps.length || 0} hueco(s) y ${quality.outOfRange} valor(es) fuera de los límites de revisión usados (−50–500 °C; 0–1000 kW).`
   ];
@@ -698,6 +762,22 @@ function renderExtra(findings) {
   document.querySelector("#extra-content").innerHTML = items
     .map((item) => `<li>${escapeHtml(item)}</li>`)
     .join("");
+}
+
+function describeCorrelationDifference(withEvent, withoutEvent) {
+  const difference = withoutEvent - withEvent;
+
+  if (Math.abs(difference) < 0.05) {
+    return "Al quitar ese evento, la relación apenas cambia.";
+  }
+
+  const direction = (value) =>
+    Math.abs(value) < 0.05 ? "casi nula" : value < 0 ? "negativa" : "positiva";
+
+  return (
+    `Al quitar ese episodio, pasa de una relación ${direction(withEvent)} a ${direction(withoutEvent)} ` +
+    `(cambia ${formatNumber(Math.abs(difference))} puntos): durante esas horas subió el consumo mientras bajaba la temperatura.`
+  );
 }
 
 function formatDate(ts) {

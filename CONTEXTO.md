@@ -106,7 +106,7 @@ Exactamente 3 líneas: (1) cuándo y qué se vio (día, hora, valores), (2) anal
 
 6.4 Hallazgos extra
 
-kWh por día · correlación temp–kw en marcha · deriva de la temperatura media a lo largo de la semana · calidad del dato (nulos, duplicados, valores imposibles).
+kWh por día sumando todas las filas, incluidas las paradas · correlación temp–kw en marcha fuera del mantenimiento, comparada con la correlación al quitar las filas del evento más grave y explicación de la diferencia · deriva de la temperatura media a lo largo de la semana · calidad del dato (nulos, duplicados, valores imposibles).
 
 7. UI (IDs del DOM)
 Sección	ID	Contenido
@@ -132,21 +132,23 @@ CSS: una columna, tarjetas por sección, @media print para que todo quepa en 1 h
  [x] F8 CSS adaptable + reglas de impresión (impresión A4 pendiente de comprobar)
  [x] F9 Sección "Uso de IA"
 
-Ahora mismo: aplicación implementada. El CSV contiene 168 registros: 165 en marcha y 3 paradas (mié 23, 06:00–08:00); la fila de las 09:00 dice marcha, 188,4 °C y 144,2 kW. La ventana de mantenimiento incluye las 09:00, por tanto esa lectura queda fuera del detector; no aparece anomalía en las horas posteriores del miércoles. El resumen diario usa todas las horas: el miércoles su media es 167,4 °C, máxima 188,4 °C, mínima 44,2 °C y horas en marcha 21/24; incluye una nota generada con las 3 horas paradas del mantenimiento. La tabla de anomalías muestra un consumo fuera de rango el jueves 24 a las 06:00 y una anomalía más grave el viernes 25 de 14:00 a 20:00 (temperatura de 157,5–182,7 °C y consumo de 142,4–161,0 kW). En los datos actuales no se activan las reglas de sensor plano ni de arranque sin calentamiento. Pendiente: validar Live Server y comprobar PDF en una hoja.
+Ahora mismo: aplicación implementada. El CSV contiene 168 registros: 165 en marcha y 3 paradas (mié 23, 06:00–08:00); la fila de las 09:00 dice marcha, 188,4 °C y 144,2 kW. La ventana de mantenimiento incluye las 09:00, por tanto esa lectura queda fuera del detector; no aparece anomalía en las horas posteriores del miércoles. El resumen diario usa todas las horas: el miércoles su media es 167,4 °C, máxima 188,4 °C, mínima 44,2 °C y horas en marcha 21/24; incluye una nota generada con las 3 horas paradas del mantenimiento. La anomalía más grave es el viernes 25: la temperatura estuvo fuera del rango entre las 14:00 y las 19:00 (hasta 157,5 °C, frente a la mediana habitual de 185,1 °C); a las 20:00 ya había vuelto al rango. El consumo subió en ese episodio. El consumo diario ahora suma todas las lecturas, incluso paradas. La correlación temperatura–consumo en horas en marcha pasa de −0,6 con el evento a +0,6 sin él, porque durante ese episodio subió el consumo mientras bajaba la temperatura. En los datos actuales no se activan las reglas de sensor plano ni de arranque sin calentamiento. Pendiente: validar Live Server y comprobar PDF en una hoja.
 
 9. Decisiones
 Tema	Decisión	Motivo
 Estadísticas diarias	media, máxima y mínima con todas las horas registradas	La columna de horas en marcha muestra marcha/total (por ejemplo, 21/24); las paradas de mantenimiento se indican con etiqueta y nota dinámica.
 Método de rango normal	mediana ± 3 × 1,4826 × MAD	Robusto ante valores extremos; se calcula en marcha fuera de mantenimiento. Para este CSV: temperatura 179,3–190,9 °C y consumo 136,3–147,8 kW.
 Umbrales	Temperatura/consumo fuera de límites robustos; salto horario ≥10 °C; sensor plano desde 4 lecturas; arranque: subida <5 °C en 3 h	Los límites exactos se calculan desde el CSV y se muestran en la página; las reglas de sensor plano y arranque también se muestran en el método. Mantenimiento del mié 23 06:00–09:00 excluido inclusivamente; el registro de las 09:00 está en marcha, pero se excluye por la ventana.
-Aviso al operario	Resume el evento de mayor gravedad, no el más largo	Se priorizan fallos de arranque/sensor plano, después temperatura fuera de rango, salto, consumo y parada; se especifica si temperatura/consumo subieron o bajaron.
+Aviso al operario	Tres líneas en lenguaje sencillo sobre la excursión térmica más grave	La franja termina en la última hora fuera de rango (se omiten las horas recuperadas); muestra el extremo y la mediana habitual. La analogía menciona que subió el consumo mientras bajaba la temperatura; recomienda revisar horno y sensor sin afirmar causa.
+Consumo y correlación	Consumo diario con todas las filas; correlación operativa con y sin el evento más grave	La correlación se calcula sobre horas en marcha fuera de mantenimiento; al comparar, se quitan del cálculo las filas del evento completo y se explica cómo cambia la relación.
 10. Checklist de entrega
  [ ] Consola (F12) sin errores con Live Server (pendiente)
  [x] CSV inspeccionado: 168 filas; estados: 165 marcha y 3 parada
  [x] Contrastar la media, máxima y mínima del miércoles con todas las horas registradas
  [x] La parada 06–08 y el registro de las 09:00 están dentro de la exclusión de mantenimiento (06–09 inclusivo)
  [x] En el informe: consumo fuera de rango jue 24 06:00; evento más grave vie 25 14:00–20:00; sin señal de sensor plano ni arranque sin calentamiento en estos datos
- [x] Aviso de 3 líneas basado en el evento más grave, con dirección de las lecturas y sin afirmar causas no demostradas
+ [x] Aviso de 3 líneas: franja térmica real, extremo frente a mediana, analogía consumo/temperatura y recomendación sin afirmar la causa
+ [x] Consumo diario suma todas las lecturas; correlación compara valores con y sin el evento más grave y explica el cambio
  [ ] Impresión/PDF en una hoja (pendiente)
  [x] Nota de uso de IA incluida
 11. Registro de uso de IA
