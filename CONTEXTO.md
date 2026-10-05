@@ -19,31 +19,30 @@ Regla de negocio: mié 2026-09-23 06:00–08:00 = parada por mantenimiento progr
 Fichero: horno_semana.csv (en la raíz del proyecto, junto a index.html; se carga con fetch('horno_semana.csv')) · filas esperadas: 168 (7 × 24).
 
 Columna (CSV)	Campo interno	Tipo	Notas
-fecha_hora	ts	Date	Formato YYYY-MM-DD H:mm (hora sin cero inicial, ej. 2026-09-21 0:00). Parsear a mano en hora local.
+fecha_hora	ts	Date	Formato YYYY-MM-DD HH:mm (hora con cero inicial, ej. 2026-09-21 00:00). Parsear a mano en hora local.
 temperatura_c	temp	number (°C)	Temperatura del horno. Rango visto en las primeras 21 h: ~182–189 °C.
 consumo_kw	kw	number (kW)	Consumo eléctrico. Rango visto en las primeras 21 h: ~138–145 kW. 1 h ⇒ kW ≈ kWh.
-estado	running	boolean	Valores: marcha ⇒ true; parado ⇒ false (comprobar que no hay otros valores ni mayúsculas/espacios).
+estado	running	boolean	Valores: marcha ⇒ true; parada ⇒ false (comprobar que no hay otros valores ni mayúsculas/espacios).
 Formato real (visto en la hoja de cálculo)
 cabecera:           fecha_hora,temperatura_c,consumo_kw,estado
-formato fecha:      YYYY-MM-DD H:mm   (hora sin cero inicial: "2026-09-21 0:00", "2026-09-21 10:00")
-decimal:            punto ("186.3")   -> verificar en el CSV crudo
+formato fecha:      YYYY-MM-DD HH:mm   (hora con cero inicial: "2026-09-21 00:00", "2026-09-21 10:00")
+decimal:            punto ("186.3")
 valores de estado:  "marcha" y "parada" (confirmados en el CSV; se normalizan como running true/false)
-separador:          SIN CONFIRMAR (la hoja ya lo interpretó). Abrir el .csv en el editor de texto.
-                    Si no se sabe, dejar que PapaParse lo autodetecte (no pasar `delimiter`).
-filas leídas:       ? (esperado 168)
+separador:          coma
+filas leídas:       168
 muestra:
   fecha_hora,temperatura_c,consumo_kw,estado
-  2026-09-21 0:00,184,142.5,marcha
-  2026-09-21 1:00,186.3,141.9,marcha
-  2026-09-21 2:00,184.9,142.9,marcha
-  2026-09-21 3:00,186.8,144.7,marcha
-  2026-09-21 4:00,185.8,142.2,marcha
+  2026-09-21 00:00,184.0,142.5,marcha
+  2026-09-21 01:00,186.3,141.9,marcha
+  2026-09-21 02:00,184.9,142.9,marcha
+  2026-09-21 03:00,186.8,144.7,marcha
+  2026-09-21 04:00,185.8,142.2,marcha
 
-Primeras 21 filas (lun 21, 0:00–20:00): todo marcha, temp 182–189 °C, consumo 138–145 kW. Sirven como referencia provisional de funcionamiento normal; confirmar con la semana completa.
+Primeras 21 filas (lun 21, 00:00–20:00): todo marcha, temp 182–189 °C, consumo 138–145 kW. Sirven como referencia provisional de funcionamiento normal; confirmar con la semana completa.
 
 Parseo de fecha (importante)
 
-new Date("2026-09-21 0:00") NO es fiable (el formato no es ISO y varía entre navegadores; Safari suele devolver Invalid Date). Parsear con regex:
+new Date("2026-09-21 00:00") NO es fiable (el formato no es ISO y varía entre navegadores; Safari suele devolver Invalid Date). Parsear con regex:
 
 js
 function parseTs(str) {
@@ -74,7 +73,7 @@ describeFile(rows)     → obj   // n filas, rango fechas, min/max, nº parado/e
 dailyStats(rows, {onlyRunning:boolean}) → DayStat[]  // { dayKey, label, mean, max, min, n }
 detectAnomalies(rows)  → Anomaly[]   // { start, end, type, severity, description }
 extraFindings(rows)    → obj         // kWh/día, corr(temp,kw), deriva semanal, calidad del dato
-buildOperatorNotice(anomalies) → string[2]
+buildOperatorNotice(anomalies) → string[3]
 render*()                      // renderFile, renderDaily, renderChart, renderAnomalies, ...
 Convenciones
 dayKey = YYYY-MM-DD construido con getters locales (getFullYear/getMonth/getDate). No usar toISOString(): convierte a UTC y puede mover el registro al día anterior.
@@ -102,7 +101,7 @@ Agrupar horas consecutivas en un único evento {start, end, ...}.
 Reglas activas: R1, R2, R3, R5, R6 y huecos de R7. R4 no está activada. Parámetros: lo y hi se calculan desde el CSV; salto ≥10 °C; sensor plano = 4 lecturas consecutivas idénticas; arranque sin subida ≥5 °C en 3 horas. El detector de arranque solo actúa si empieza por debajo del límite inferior habitual.
 6.3 Aviso al operario
 
-Exactamente 2 líneas: (1) cuándo y qué se vio (día, hora, valores), (2) recomendación de revisar el horno y el sensor sin afirmar la causa.
+Exactamente 3 líneas: (1) día, franja térmica real sin horas ya recuperadas, valor extremo y valor habitual aproximado; (2) consumo máximo frente al habitual si subió mientras bajaba la temperatura, sin analogías, o frase alternativa sencilla; (3) revisar el horno y el sensor antes del próximo turno y avisar si se repite, aclarando que los datos no permiten saber la causa.
 
 6.4 Hallazgos extra
 
@@ -124,10 +123,10 @@ CSS: una columna, tarjetas por sección, @media print para que todo quepa en 1 h
  [x] F0 Estructura y CDNs (Live Server pendiente de probar)
  [x] F1 Lectura del CSV: 168 filas y columnas esperadas
  [x] F2 describeFile + sección fichero
- [x] F3 dailyStats + tablas (todas las horas y solo en marcha)
+ [x] F3 dailyStats + una tabla con todas las horas
  [x] F4 Gráfica Chart.js
  [x] F5 detectAnomalies con exclusión de mantenimiento
- [x] F6 buildOperatorNotice (dos líneas)
+ [x] F6 buildOperatorNotice (exactamente tres líneas)
  [x] F7 extraFindings
  [x] F8 CSS adaptable + reglas de impresión (impresión A4 pendiente de comprobar)
  [x] F9 Sección "Uso de IA"
@@ -139,7 +138,7 @@ Tema	Decisión	Motivo
 Estadísticas diarias	media, máxima y mínima con todas las horas registradas	La columna de horas en marcha muestra marcha/total (por ejemplo, 21/24); las paradas de mantenimiento se indican con etiqueta y nota dinámica.
 Método de rango normal	mediana ± 3 × 1,4826 × MAD	Robusto ante valores extremos; se calcula en marcha fuera de mantenimiento. Para este CSV: temperatura 179,3–190,9 °C y consumo 136,3–147,8 kW.
 Umbrales	Temperatura/consumo fuera de límites robustos; salto horario ≥10 °C; sensor plano desde 4 lecturas; arranque: subida <5 °C en 3 h	Los límites exactos se calculan desde el CSV y se muestran en la página; las reglas de sensor plano y arranque también se muestran en el método. Mantenimiento del mié 23 06:00–09:00 excluido inclusivamente; el registro de las 09:00 está en marcha, pero se excluye por la ventana.
-Aviso al operario	Dos líneas en lenguaje sencillo sobre la excursión térmica más grave	La franja termina en la última hora fuera de rango (se omiten las horas recuperadas); muestra el extremo y la mediana habitual. La segunda línea recomienda revisar horno y sensor sin afirmar causa.
+Aviso al operario	Tres líneas: qué pasó, dato de consumo comparado con el habitual y recomendación	La primera indica la franja real sin horas recuperadas, el extremo y lo normal aproximado. La segunda compara el consumo máximo con el habitual cuando sube mientras baja la temperatura, sin analogías. La tercera recomienda revisar horno y sensor antes del próximo turno y avisar si se repite, sin afirmar la causa.
 Consumo y correlación	Consumo diario con todas las filas; correlación operativa con y sin el evento más grave	La correlación se calcula sobre horas en marcha fuera de mantenimiento; al comparar, se quitan del cálculo las filas del evento completo y se explica cómo cambia la relación.
 10. Checklist de entrega
  [ ] Consola (F12) sin errores con Live Server (pendiente)
@@ -147,7 +146,7 @@ Consumo y correlación	Consumo diario con todas las filas; correlación operativ
  [x] Contrastar la media, máxima y mínima del miércoles con todas las horas registradas
  [x] La parada 06–08 y el registro de las 09:00 están dentro de la exclusión de mantenimiento (06–09 inclusivo)
  [x] En el informe: consumo fuera de rango jue 24 06:00; evento más grave vie 25 14:00–20:00; sin señal de sensor plano ni arranque sin calentamiento en estos datos
- [x] Aviso de 2 líneas: franja térmica real, extremo frente a mediana y recomendación sin afirmar la causa
+ [x] Aviso de exactamente 3 líneas: franja térmica real, extremo frente a lo normal, consumo si corresponde y recomendación sin afirmar la causa
  [x] Consumo diario suma todas las lecturas; correlación compara valores con y sin el evento más grave y explica el cambio
  [ ] Impresión/PDF en una hoja (pendiente)
  [x] Nota de uso de IA incluida

@@ -510,8 +510,9 @@ function describeNoticeEvent(event) {
 function buildOperatorNotice(anomalies) {
   if (!anomalies.length) {
     return [
-      "No se detectaron lecturas fuera de los criterios usados esta semana.",
-      "Continúe con las comprobaciones normales del turno."
+      "Esta semana no se observaron cambios de temperatura fuera de lo esperado.",
+      "No se observó que el consumo subiera mientras bajaba la temperatura.",
+      "Conviene revisar el horno y su sensor de temperatura antes del próximo turno y avisar si se repite; con estos datos no se puede saber la causa."
     ];
   }
 
@@ -523,23 +524,36 @@ function buildOperatorNotice(anomalies) {
     const last = formatDateTime(event.end);
     const period = event.start.getTime() === event.end.getTime() ? first : `${first} a ${last}`;
     return [
-      `El ${period} se observó ${event.reasons[0].toLowerCase()}.`,
-      "Revise el horno y el sensor; estas lecturas no permiten afirmar cuál es la causa."
+      `El ${period} se observó una lectura distinta de lo habitual.`,
+      "No se observó que el consumo subiera mientras bajaba la temperatura.",
+      "Conviene revisar el horno y su sensor de temperatura antes del próximo turno y avisar si se repite; con estos datos no se puede saber la causa."
     ];
   }
 
   const outsideTemperatures = excursion.rows.map((row) => row.temp);
-  const extreme = Math.min(...outsideTemperatures);
+  const lowest = Math.min(...outsideTemperatures);
+  const highest = Math.max(...outsideTemperatures);
+  const isCooling =
+    Math.abs(lowest - analysisParameters.tempBounds.center) >=
+    Math.abs(highest - analysisParameters.tempBounds.center);
+  const extreme = isCooling ? lowest : highest;
   const dayLabel = `${DAY_NAMES[excursion.start.getDay()]} ${excursion.start.getDate()} ${MONTH_NAMES[excursion.start.getMonth()]}`;
   const period =
     excursion.start.getTime() === excursion.end.getTime()
       ? `a las ${formatTime(excursion.start)}`
       : `de ${formatTime(excursion.start)} a ${formatTime(excursion.end)}`;
   const usual = formatNumber(analysisParameters.tempBounds.center);
+  const temperatureChange = excursion.rows.at(-1).temp - excursion.rows[0].temp;
+  const consumptionChange = excursion.rows.at(-1).kw - excursion.rows[0].kw;
+  const consumptionRoseWhileCooling = temperatureChange < 0 && consumptionChange > 0;
+  const consumptionLine = consumptionRoseWhileCooling
+    ? `Mientras se enfriaba, gastó más electricidad (hasta ${formatNumber(Math.max(...excursion.rows.map((row) => row.kw)))} kW frente a unos ${formatNumber(analysisParameters.kwBounds.center)} kW).`
+    : "En ese periodo no se observó que el consumo subiera mientras bajaba la temperatura.";
 
   return [
-    `El ${dayLabel}, ${period}, la temperatura bajó hasta ${formatNumber(extreme)} °C; su valor habitual (mediana) es ${usual} °C.`,
-    "Revise el horno y el sensor; estas lecturas no permiten afirmar cuál es la causa."
+    `El ${dayLabel}, ${period}, ${isCooling ? "el horno se enfrió" : "el horno se calentó"}: ${isCooling ? "bajó" : "subió"} hasta ${formatNumber(extreme)} °C cuando lo normal son unos ${usual} °C.`,
+    consumptionLine,
+    "Conviene revisar el horno y su sensor de temperatura antes del próximo turno y avisar si se repite; con estos datos no se puede saber la causa."
   ];
 }
 
@@ -700,9 +714,30 @@ function renderAnomalies(anomalies) {
   body.innerHTML = anomalies.length
     ? anomalies
         .map(
-          (event) =>
+          (event) => {
+            const maximumExcess = Math.max(
+              ...event.rows.map((row) =>
+                Math.max(
+                  row.kw - analysisParameters.kwBounds.hi,
+                  analysisParameters.kwBounds.lo - row.kw,
+                  0
+                )
+              )
+            );
+            const mildConsumption =
+              event.reasons.length === 1 &&
+              event.reasons[0] === "Consumo fuera del rango habitual" &&
+              maximumExcess > 0 &&
+              maximumExcess < 1;
+            const mildLabel = mildConsumption
+              ? ' <span class="file-pill warn">variación leve</span>'
+              : "";
+
+            return (
             `<tr><td>${formatDateTime(event.start)}${event.end.getTime() !== event.start.getTime() ? `<br>— ${formatDateTime(event.end)}` : ""}</td>` +
-            `<td>${escapeHtml(event.type)}</td><td>${escapeHtml(describeEvent(event))}</td></tr>`
+            `<td>${escapeHtml(event.type)}${mildLabel}</td><td>${escapeHtml(describeEvent(event))}</td></tr>`
+            );
+          }
         )
         .join("")
     : '<tr><td colspan="3" class="empty">No se detectaron anomalías con estos criterios.</td></tr>';
@@ -713,7 +748,8 @@ function renderAnomalies(anomalies) {
       `Criterio: mediana ± 3 × 1,4826 × MAD en horas en marcha fuera de mantenimiento. ` +
       `Temperatura ${formatNumber(tempBounds.lo)}–${formatNumber(tempBounds.hi)} °C; consumo ${formatNumber(kwBounds.lo)}–${formatNumber(kwBounds.hi)} kW; salto horario ≥ ${jump} °C. ` +
       `También se señalan ${frozenHours} temperaturas idénticas consecutivas y arranques que no suben ${formatNumber(startupRise)} °C en ${startupHours} horas. ` +
-      `El intervalo programado del miércoles 06:00–09:00 se excluye del detector, incluido el registro de las 09:00.`;
+      `El intervalo programado del miércoles 06:00–09:00 se excluye del detector, incluido el registro de las 09:00. ` +
+      "La última hora del evento (20:00) se señala por el salto de temperatura al recuperarse; la temperatura ya estaba dentro del rango.";
   }
 }
 
