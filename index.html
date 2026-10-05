@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f3f2ec">
+    <title>Horno · Informe semanal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+    <script src="app.js" defer></script>
+</head>
+
+<body>
+    <main class="report">
+        <header class="masthead">
+            <div class="brand"><span class="brand-mark" aria-hidden="true">H2</span><span>OPERACIONES <b>/ LÍNEA
+                        2</b></span></div>
+            <p class="period">INFORME DE PROCESO <span>·</span> 21—27 SEP 2026</p>
+        </header>
+
+        <section class="intro" aria-labelledby="page-title">
+            <div>
+                <p class="eyebrow">CONTROL TÉRMICO / RESUMEN SEMANAL</p>
+                <h1 id="page-title">Horno <em>en observación.</em></h1>
+                <p class="lede">Lectura horaria de temperatura, consumo y estado de marcha.</p>
+            </div>
+            <div id="load-status" class="load-status" role="status"><span class="status-dot"></span><span>Cargando
+                    horno_semana.csv</span></div>
+        </section>
+
+        <section id="sec-fichero" class="section file-summary" aria-labelledby="file-title">
+            <div class="section-heading"><span class="section-index">01</span>
+                <h2 id="file-title">Qué contiene el fichero</h2>
+            </div>
+            <div id="file-content" class="file-content">
+                <p>Esperando el CSV para verificar sus filas y columnas.</p>
+            </div>
+        </section>
+
+        <section id="sec-diario" class="section" aria-labelledby="daily-title">
+            <div class="section-heading"><span class="section-index">02</span>
+                <h2 id="daily-title">Resumen por día</h2><span class="unit-note">°C · solo horas en marcha</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Día</th>
+                            <th>Media</th>
+                            <th>Máxima</th>
+                            <th>Mínima</th>
+                            <th>Horas</th>
+                        </tr>
+                    </thead>
+                    <tbody id="daily-body">
+                        <tr>
+                            <td colspan="5" class="empty">Los resultados aparecerán al cargar el fichero.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="sec-grafica" class="section chart-section" aria-labelledby="chart-title">
+            <div class="section-heading"><span class="section-index">03</span>
+                <h2 id="chart-title">Temperatura · semana completa</h2><span id="chart-range" class="unit-note">°C por
+                    hora</span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-temp"
+                    aria-label="Serie horaria de temperatura del horno durante la semana" role="img"></canvas></div>
+            <div class="legend"><span><i class="legend-line"></i>En marcha</span><span><i class="legend-stop"></i>Parada
+                    programada</span><span><i class="legend-alert"></i>Lectura señalada</span></div>
+        </section>
+
+        <section id="sec-anomalias" class="section" aria-labelledby="anomaly-title">
+            <div class="section-heading"><span class="section-index">04</span>
+                <h2 id="anomaly-title">Anomalías observadas</h2>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Periodo</th>
+                            <th>Señal</th>
+                            <th>Detalle observado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="anomaly-body">
+                        <tr>
+                            <td colspan="3" class="empty">Analizando registros.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p id="method-note" class="method-note"></p>
+        </section>
+
+        <section id="sec-aviso" class="notice-section" aria-labelledby="notice-title">
+            <div class="notice-label"><span class="notice-symbol" aria-hidden="true">!</span>
+                <div>
+                    <p class="eyebrow">PARA EL OPERARIO</p>
+                    <h2 id="notice-title">Aviso de revisión</h2>
+                </div>
+            </div>
+            <div id="operator-notice" class="notice-lines" aria-live="polite">
+                <p>El aviso se generará al terminar el análisis.</p>
+            </div>
+        </section>
+
+        <section id="sec-extra" class="section" aria-labelledby="extra-title">
+            <div class="section-heading"><span class="section-index">05</span>
+                <h2 id="extra-title">Otros hallazgos</h2>
+            </div>
+            <ul id="extra-content" class="finding-list">
+                <li>Se calcularán con los registros disponibles.</li>
+            </ul>
+        </section>
+
+        <section id="sec-ia" class="section ai-note" aria-labelledby="ai-title">
+            <div class="section-heading"><span class="section-index">06</span>
+                <h2 id="ai-title">Uso de IA</h2>
+            </div>
+            <p>GitHub Copilot se utilizó para estructurar la página, implementar el análisis del CSV y redactar el aviso
+                a partir de reglas explícitas. Se comprobó el número de filas, los estados y los valores de parada
+                contra el archivo original. Las conclusiones describen señales observadas; no identifican causas de
+                avería.</p>
+        </section>
+
+        <footer><span>FUENTE: horno_semana.csv</span><span>LECTURA HORARIA · TEMPERATURA Y CONSUMO</span></footer>
+    </main>
+</body>
+
+</html>
